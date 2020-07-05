@@ -1,0 +1,2 @@
+rootProject.name='Parks of Lisbon'
+include ':app'
