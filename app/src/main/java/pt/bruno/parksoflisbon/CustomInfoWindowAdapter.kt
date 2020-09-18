@@ -1,9 +1,10 @@
-package com.example.parksoflisbon
+package pt.bruno.parksoflisbon
 
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
+import com.example.parksoflisbon.R
 import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter
 import com.google.android.gms.maps.model.Marker
 

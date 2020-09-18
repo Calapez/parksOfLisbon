@@ -1,4 +1,4 @@
-package com.example.parksoflisbon
+package pt.bruno.parksoflisbon
 
 import android.app.Activity
 import android.content.Intent
@@ -9,9 +9,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
-import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.example.parksoflisbon.R
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -19,6 +19,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -40,6 +41,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
     private lateinit var locationRequest: LocationRequest
     private var locationUpdateState = false
     private var selectedMarker: Marker? = null
+    private var markers: MutableList<MarkerOptions> = mutableListOf()
+    private var markersBounds = LatLngBounds.builder()
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
@@ -118,14 +121,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mMap.setOnInfoWindowClickListener(this)
         mMap.setOnInfoWindowCloseListener(this)
 
-        mMap.isMyLocationEnabled = true
+        if (ActivityCompat.checkSelfPermission(this,
+                android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            mMap.isMyLocationEnabled = true
+        }
+
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
 
         addLocToMap()
 
         getParks()
-        mMap.setInfoWindowAdapter(CustomInfoWindowAdapter(this));
+        mMap.setInfoWindowAdapter(
+            CustomInfoWindowAdapter(
+                this
+            )
+        );
     }
 
     override fun onMarkerClick(marker: Marker?): Boolean {
@@ -148,11 +159,19 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
     private fun addLocToMap() {
         if (ActivityCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            // Does not have location permission, request it
             ActivityCompat.requestPermissions(this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST_CODE)
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
+
+            // Animate to markers
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(markersBounds.build(), 2))
             return
         }
 
+        // Has location permissions
         mFusedLocationClient.lastLocation.addOnSuccessListener(this) { location ->
             // Got last known location. In some rare situations this can be null.
             if (location != null) {
@@ -163,12 +182,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         }
     }
 
-    private fun placeMarkerOnMap(park: Park) {
+    private fun addParkToMap(park: Park) {
         val markerOptions = MarkerOptions()
             .position(LatLng(park.lat, park.lon))
             .title(park.name)
             .snippet(park.desc)
 
+        markersBounds.include(LatLng(park.lat, park.lon))
+        markers.add(markerOptions)
         mMap.addMarker(markerOptions)
     }
 
@@ -177,7 +198,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                 android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                 arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE)
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
             return
         }
 
@@ -209,7 +231,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                     // Show the dialog by calling startResolutionForResult(),
                     // and check the result in onActivityResult().
                     e.startResolutionForResult(this@MapsActivity,
-                        REQUEST_CHECK_SETTINGS)
+                        REQUEST_CHECK_SETTINGS
+                    )
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                 }
@@ -227,7 +250,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
     }
 
     private fun getParks() {
-        val parks: JSONArray = JSONObject(readJSONFromAsset("parks.geojson")).getJSONArray("features")
+        markers.clear()  // Reset markers
+        markersBounds = LatLngBounds.builder()  // Reset markers bounds
+
+        val parks: JSONArray = JSONObject(readJSONFromAsset("parks.geojson"))
+            .getJSONArray("features")
 
         for (i in 0 until parks.length()) {
             val parkJson = parks.getJSONObject(i)
@@ -240,7 +267,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                 parkJson.getJSONObject("properties").getString("INF_DESCRICAO")
             )
             mParks.add(p)
-            placeMarkerOnMap(p)
+            addParkToMap(p)
         }
     }
 
@@ -264,4 +291,5 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mFabButton.hide()
         mFabText.visibility = View.INVISIBLE
     }
+
 }

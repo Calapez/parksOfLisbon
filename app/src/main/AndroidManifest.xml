@@ -30,7 +30,7 @@
             android:value="YOUR_API_KEY_HERE" />
 
         <activity
-            android:name=".MapsActivity"
+            android:name="pt.bruno.parksoflisbon.MapsActivity"
             android:icon="@drawable/logo"
             android:label="@string/app_name">
             <intent-filter>

@@ -1,4 +1,4 @@
-package com.example.parksoflisbon
+package pt.bruno.parksoflisbon
 
 data class Park(val id: Int,
                 val lat: Double,

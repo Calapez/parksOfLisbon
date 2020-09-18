@@ -1,4 +1,4 @@
-package com.example.parksoflisbon
+package pt.bruno.parksoflisbon
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

@@ -1,4 +1,4 @@
-package com.example.parksoflisbon
+package pt.bruno.parksoflisbon
 
 import org.junit.Test
 
