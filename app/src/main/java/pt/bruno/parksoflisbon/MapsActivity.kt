@@ -1,19 +1,11 @@
 package pt.bruno.parksoflisbon
 
-import android.app.Activity
 import android.content.Intent
-import android.content.IntentSender
-import android.content.pm.PackageManager
-import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import com.example.parksoflisbon.R
-import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -31,23 +23,13 @@ import java.io.InputStream
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener, GoogleMap.OnInfoWindowClickListener, GoogleMap.OnInfoWindowCloseListener {
 
     private lateinit var mMap: GoogleMap
-    private lateinit var mFusedLocationClient: FusedLocationProviderClient
-    private lateinit var mLastLocation: Location
     private lateinit var mFabButton: FloatingActionButton
     private lateinit var mFabText: TextView
 
     private val mParks = mutableListOf<Park>()
-    private lateinit var locationCallback: LocationCallback
-    private lateinit var locationRequest: LocationRequest
-    private var locationUpdateState = false
     private var selectedMarker: Marker? = null
     private var markers: MutableList<MarkerOptions> = mutableListOf()
     private var markersBounds = LatLngBounds.builder()
-
-    companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 1
-        private const val REQUEST_CHECK_SETTINGS = 2
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,15 +39,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
                 .findFragmentById(R.id.map) as SupportMapFragment
 
         mapFragment.getMapAsync(this)
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(p0: LocationResult) {
-                super.onLocationResult(p0)
-
-                mLastLocation = p0.lastLocation
-            }
-        }
 
         mFabButton = findViewById(R.id.fab)
         mFabText = findViewById(R.id.fabText)
@@ -80,30 +53,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         }
 
         hideFab()
-
-        createLocationRequest()
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CHECK_SETTINGS) {
-            if (resultCode == Activity.RESULT_OK) {
-                locationUpdateState = true
-                startLocationUpdates()
-            }
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        mFusedLocationClient.removeLocationUpdates(locationCallback)
-    }
-
-    public override fun onResume() {
-        super.onResume()
-        if (!locationUpdateState) {
-            startLocationUpdates()
-        }
     }
 
     /**
@@ -121,22 +70,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mMap.setOnInfoWindowClickListener(this)
         mMap.setOnInfoWindowCloseListener(this)
 
-        if (ActivityCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            mMap.isMyLocationEnabled = true
-        }
-
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
-
-        addLocToMap()
-
-        getParks()
         mMap.setInfoWindowAdapter(
             CustomInfoWindowAdapter(
                 this
             )
-        );
+        )
+
+        mMap.setOnMapLoadedCallback { getParks() }
     }
 
     override fun onMarkerClick(marker: Marker?): Boolean {
@@ -156,32 +98,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         hideFab()
     }
 
-    private fun addLocToMap() {
-        if (ActivityCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-            // Does not have location permission, request it
-            ActivityCompat.requestPermissions(this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-
-            // Animate to markers
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(markersBounds.build(), 2))
-            return
-        }
-
-        // Has location permissions
-        mFusedLocationClient.lastLocation.addOnSuccessListener(this) { location ->
-            // Got last known location. In some rare situations this can be null.
-            if (location != null) {
-                mLastLocation = location
-                val currentLatLng = LatLng(location.latitude, location.longitude)
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12f))
-            }
-        }
-    }
-
     private fun addParkToMap(park: Park) {
         val markerOptions = MarkerOptions()
             .position(LatLng(park.lat, park.lon))
@@ -191,53 +107,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         markersBounds.include(LatLng(park.lat, park.lon))
         markers.add(markerOptions)
         mMap.addMarker(markerOptions)
-    }
-
-    private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-            return
-        }
-
-        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null /* Looper */)
-    }
-
-    private fun createLocationRequest() {
-        locationRequest = LocationRequest()
-        locationRequest.interval = 10000
-        locationRequest.fastestInterval = 5000
-        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-
-        val builder = LocationSettingsRequest.Builder()
-            .addLocationRequest(locationRequest)
-
-        val client = LocationServices.getSettingsClient(this)
-        val task = client.checkLocationSettings(builder.build())
-
-        task.addOnSuccessListener {
-            locationUpdateState = true
-            startLocationUpdates()
-        }
-
-        task.addOnFailureListener { e ->
-            if (e is ResolvableApiException) {
-                // Location settings are not satisfied, but this can be fixed
-                // by showing the user a dialog.
-                try {
-                    // Show the dialog by calling startResolutionForResult(),
-                    // and check the result in onActivityResult().
-                    e.startResolutionForResult(this@MapsActivity,
-                        REQUEST_CHECK_SETTINGS
-                    )
-                } catch (sendEx: IntentSender.SendIntentException) {
-                    // Ignore the error.
-                }
-            }
-        }
     }
 
     private fun goTo(lat: Double, lon: Double, name: String) {
@@ -269,16 +138,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             mParks.add(p)
             addParkToMap(p)
         }
+
+        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(markersBounds.build(), 50))
     }
 
 
-    private fun readJSONFromAsset(assetName: String): String? {
+    private fun readJSONFromAsset(assetName: String): String {
         return try {
             val inputStream:InputStream = assets.open(assetName)
             inputStream.bufferedReader().use{it.readText()}
         } catch (ex: Exception) {
             ex.printStackTrace()
-            null
+            ""
         }
     }
 

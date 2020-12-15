@@ -4,14 +4,15 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
-import com.example.parksoflisbon.R
 import com.google.android.gms.maps.GoogleMap.InfoWindowAdapter
 import com.google.android.gms.maps.model.Marker
 
 
 class CustomInfoWindowAdapter(private val mContext: Context) :
     InfoWindowAdapter {
-    private val mWindow: View
+    private val mWindow: View =
+        LayoutInflater.from(mContext).inflate(R.layout.custom_info_window, null)
+
     private fun rendowWindowText(marker: Marker, view: View) {
         val title = marker.title
         val tvTitle = view.findViewById<View>(R.id.title) as TextView
@@ -35,7 +36,4 @@ class CustomInfoWindowAdapter(private val mContext: Context) :
         return mWindow
     }
 
-    init {
-        mWindow = LayoutInflater.from(mContext).inflate(R.layout.custom_info_window, null)
-    }
 }
