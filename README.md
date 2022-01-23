@@ -31,5 +31,4 @@
   <img src="./readme/screenshot_parks.jpg" width="200" height="400" />
   <img src="./readme/screenshot_info.jpg" width="200" height="400" />
   <img src="./readme/screenshot_gmaps_1.jpg" width="200" height="400" />
-  <img src="./readme/screenshot_gmaps_2.jpg" width="200" height="400" />
 </p>
