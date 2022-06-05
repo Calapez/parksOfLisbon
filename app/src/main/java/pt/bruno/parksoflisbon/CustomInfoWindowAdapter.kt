@@ -13,7 +13,7 @@ class CustomInfoWindowAdapter(private val mContext: Context) :
     private val mWindow: View =
         LayoutInflater.from(mContext).inflate(R.layout.custom_info_window, null)
 
-    private fun rendowWindowText(marker: Marker, view: View) {
+    private fun renderWindowText(marker: Marker, view: View) {
         val title = marker.title
         val tvTitle = view.findViewById<View>(R.id.title) as TextView
         if (title != "") {
@@ -27,12 +27,12 @@ class CustomInfoWindowAdapter(private val mContext: Context) :
     }
 
     override fun getInfoWindow(marker: Marker): View {
-        rendowWindowText(marker, mWindow)
+        renderWindowText(marker, mWindow)
         return mWindow
     }
 
     override fun getInfoContents(marker: Marker): View {
-        rendowWindowText(marker, mWindow)
+        renderWindowText(marker, mWindow)
         return mWindow
     }
 

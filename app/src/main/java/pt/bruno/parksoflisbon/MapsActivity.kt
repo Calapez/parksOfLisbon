@@ -22,6 +22,8 @@ import java.io.InputStream
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener, GoogleMap.OnInfoWindowClickListener, GoogleMap.OnInfoWindowCloseListener {
 
+    private val jsonAssetName = "parks.geojson"
+
     private lateinit var mMap: GoogleMap
     private lateinit var mFabButton: FloatingActionButton
     private lateinit var mFabText: TextView
@@ -43,11 +45,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mFabButton = findViewById(R.id.fab)
         mFabText = findViewById(R.id.fabText)
         mFabButton.setOnClickListener {
-            if (selectedMarker != null) {
+            selectedMarker?.let {
                 goTo(
-                    selectedMarker!!.position.latitude,
-                    selectedMarker!!.position.longitude,
-                    selectedMarker!!.title
+                    it.position.latitude,
+                    it.position.longitude,
+                    it.title
                 )
             }
         }
@@ -81,19 +83,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mMap.setOnMapLoadedCallback { getParks() }
     }
 
-    override fun onMarkerClick(marker: Marker?): Boolean {
+    override fun onMarkerClick(marker: Marker): Boolean {
         selectedMarker = marker
         showFab()
         return false
     }
 
-    override fun onInfoWindowClick(marker: Marker?) {
-        if (marker != null) {
-            goTo(marker.position.latitude, marker.position.longitude, marker.title)
-        }
+    override fun onInfoWindowClick(marker: Marker) {
+        goTo(marker.position.latitude, marker.position.longitude, marker.title)
     }
 
-    override fun onInfoWindowClose(p0: Marker?) {
+    override fun onInfoWindowClose(p0: Marker) {
         selectedMarker = null
         hideFab()
     }
@@ -109,8 +109,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         mMap.addMarker(markerOptions)
     }
 
-    private fun goTo(lat: Double, lon: Double, name: String) {
-        val gmmIntentUri: Uri = Uri.parse("geo:$lat,$lon?q=${Uri.encode(name)}")
+    private fun goTo(lat: Double, lon: Double, name: String?) {
+        val uriString = "geo:$lat,$lon"
+        if (name != null) {
+            uriString.plus("?q=${Uri.encode(name)}")
+        }
+
+        val gmmIntentUri: Uri = Uri.parse(uriString)
         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
         mapIntent.setPackage("com.google.android.apps.maps")
         if (mapIntent.resolveActivity(packageManager) != null) {
@@ -122,7 +127,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         markers.clear()  // Reset markers
         markersBounds = LatLngBounds.builder()  // Reset markers bounds
 
-        val parks: JSONArray = JSONObject(readJSONFromAsset("parks.geojson"))
+        val parks: JSONArray = JSONObject(readJSONFromAsset(jsonAssetName))
             .getJSONArray("features")
 
         for (i in 0 until parks.length()) {
